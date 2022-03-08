@@ -1,0 +1,160 @@
+from tkinter import *
+from socket import *
+import tkinter.font as font
+from time import *
+from tkinter import scrolledtext
+from numpy import *
+ck=''
+hk=''
+window=Tk()
+window.geometry('600x600')
+window.title("CLIENT")
+myfont = font.Font(family='Lucidia Handwriting',size=15,weight='bold')
+ke=Button(window, height=3, width=30, text="ENTER KEYS")
+ke.pack()
+ke['font']=myfont
+T = scrolledtext.ScrolledText(window, width=90, height=5)
+T.config(background='light grey', foreground='black', font='arial 12 bold', wrap='word', relief='sunken', bd=5)
+se=Button(window, height=3, width=30, text="SEND")
+se['font']=myfont
+ex=Button(window, height=3, width=30, text="EXIT")
+ex['font']=myfont
+window.update()
+chrs=[]
+for i in range(65,91):
+chrs.append(chr(i))
+for i in range(97,123):
+chrs.append(chr(i))
+chrs.append(' ')
+chrs.append('.')
+chrs.append('\n')
+chrs.append('@')
+chrs.append(',')
+chrs.append('$')
+chrs.append('!')
+portd = 5000
+hostd = gethostname()
+ds = socket()
+ds.connect((hostd, portd))
+def keygen(key):
+import numpy
+pos = key.find(':', key.find(':') + 1)
+key = key[:pos] + ';' + key[pos + 1:]
+key = key.replace(':', ' ')
+key_m = numpy.array(numpy.matrix(key))
+return key_m
+def enc(text,key):
+i=0
+enc1=''
+key_m=keygen(key)
+print(key)
+import numpy
+print(text)
+if len(text) % 2 != 0:
+for i in range(len(text) % 2):
+text = text + 'X'
+print(text)
+while i!=len(text):
+temp=''
+for s in text[i:i + 2:1]:
+temp = temp + ';' + str(chrs.index(s))
+temp = temp.lstrip(';')
+print(temp)
+cha = numpy.array(numpy.matrix(temp))
+ans = numpy.dot(key_m,cha)
+for j in ans:
+print(j)
+print(j[0] % 59)
+print(chrs[(j[0] % 59)])
+enc1 = enc1 + chrs[(j[0] % 59)]
+print(enc1)
+i=i+2
+return enc1
+def send_f(event):
+pt=''
+global hk
+global ck
+t=T.get('1.0',END)
+t=t.rstrip('\n')
+T.delete('1.0',END)
+for i in t:
+if i==' 'or i=='\n':
+pt+=i
+continue
+if i.isupper()==True:
+pt+= chr((ord(i) + ck - 65) % 26 + 65)
+else:
+pt+= chr((ord(i) + ck - 97) % 26 + 97)
+print(pt)
+pt=enc(pt,hk)
+print(pt)
+ds.send(pt.encode())
+def exit_f(event):
+temp = 'EXIT'
+ds.send(temp.encode())
+z = '\nSENT MESSAGE=' + temp
+T.insert(END, z)
+window.update()
+T.yview(END)
+sleep(3)
+window.destroy()
+def key_f(event):
+v = StringVar()
+cc=Entry(window,textvariable=v,width=40)
+cc['font'] = myfont
+v.set('Enter Key for Ceaser Cipher(1-25)')
+v1=StringVar()
+hc=Entry(window,textvariable=v1,width=60)
+hc['font'] = myfont
+v1.set('Enter key for Hill Cipher(2x2) in the format x:x:x:x each x from 1-25')
+va = Button(window, height=3, width=30, text="VALIDATE")
+va['font'] = myfont
+ke.pack_forget()
+cc.pack()
+hc.pack()
+va.pack()
+window.update()
+def valid_f(event):
+global ck
+global hk
+ck=v.get()
+hk=v1.get()
+if ck.isdigit()==True:
+if int(ck)>=1 and int(ck)<=25:
+ck=int(ck)
+v.set('Valid')
+else:
+v.set('Invalid Range')
+else:
+v.set('Invalid Type')
+if len(hk.split(':')) == 4:
+tem=keygen(hk)
+det = round(linalg.det(tem) % 57)
+if det==0:
+v1.set('Invalid Entry Determinent=0 enter values such that det non zero')
+else:
+te= hk.split(':')
+c = 0
+for i in te:
+if i.isdigit()==True:
+if int(i) >= 1 and int(i) <= 25:
+c = c + 1
+if c == 4:
+v1.set('Valid')
+else:
+v1.set('Invalid Range/Type')
+else:
+v1.set('Invalid Entry')
+if v.get()=='Valid' and v1.get()=='Valid':
+cc.pack_forget()
+hc.pack_forget()
+va.pack_forget()
+T.pack()
+se.pack()
+ex.pack()
+window.update()
+va.bind('<Button-1>',valid_f)
+se.bind('<Button-1>',send_f)
+ex.bind('<Button-1>',exit_f)
+ke.bind('<Button-1>',key_f)
+mainloop()
